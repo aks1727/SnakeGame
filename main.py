@@ -36,7 +36,8 @@ gameover_sound = pygame.mixer.Sound("resources/sound/game_over.mp3")
 font = pygame.font.SysFont(None, 55)
 clock = pygame.time.Clock()
 highScore = "0"
-
+baseScore = 5
+last_score=0
 # High Score File
 with open("resources/tmp/highScore.txt", "r") as f:
     highScore = int(f.read())
@@ -51,6 +52,7 @@ class SnakeGame:
         self.food = Food()
         self.score = 0
         self.speed = 5
+        self.last_score = 0  # Initialize last_score here
 
     def showScore(self, text, color, x, y):
         screenText = font.render(text, True, color)
@@ -61,6 +63,7 @@ class SnakeGame:
         self.food = Food()
         self.score = 0
         self.speed = 5
+        self.last_score = 0  # Reset last_score when the game is reset
         self.gameOver = False
 
     def run(self):
@@ -85,16 +88,21 @@ class SnakeGame:
                         self.exitGame = True
                     self.snake.handle_keys(event)
 
-                self.snake.move()
+                self.snake.move(self.speed)
 
                 # Snake eating the food
                 if abs(self.snake.x - self.food.x) < 20 and abs(self.snake.y - self.food.y) < 20:
                     pygame.mixer.Sound.play(eat_sound)  # Play food eating sound
-                    self.score += 5
+                    self.score += baseScore
                     self.food = Food()
                     self.snake.increase_length()
                     if self.score > highScore:
                         highScore = self.score
+
+                # Speed increase logic
+                if self.score >= self.last_score + 50:  # Only increase speed if score has increased by 50 or more
+                    self.speed += 1
+                    self.last_score = self.score
 
                 # Update game window
                 self.gameWindow.blit(bg, (0, 0))
@@ -107,9 +115,9 @@ class SnakeGame:
                 if self.snake.is_collision():
                     pygame.mixer.Sound.play(hit_sound)  # Play hit sound
                     self.gameOver = True
-
             pygame.display.update()
             clock.tick(30)
+
 
 
 class Snake:
@@ -121,23 +129,25 @@ class Snake:
         self.velocity_y = 0
         self.snakeList = []
         self.snake_length = 1
+        self.speed = 5
 
     def handle_keys(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
-                self.velocity_x = 5
+                self.velocity_x = self.speed
                 self.velocity_y = 0
             elif event.key == pygame.K_LEFT:
-                self.velocity_x = -5
+                self.velocity_x = -self.speed
                 self.velocity_y = 0
             elif event.key == pygame.K_UP:
-                self.velocity_y = -5
+                self.velocity_y = -self.speed
                 self.velocity_x = 0
             elif event.key == pygame.K_DOWN:
-                self.velocity_y = 5
+                self.velocity_y = self.speed
                 self.velocity_x = 0
 
-    def move(self):
+    def move(self, speed):
+        self.speed = speed
         self.x += self.velocity_x
         self.y += self.velocity_y
         self.snakeList.append([self.x, self.y])
@@ -153,7 +163,7 @@ class Snake:
 
     def is_collision(self):
         # Check for boundary collision
-        if self.x < 0 or self.x > screenWidth or self.y < 0 or self.y > screenHeight:
+        if self.x < 0 or self.x > screenWidth-40 or self.y < 0 or self.y > screenHeight -40:
             return True
         # Check for self-collision
         if [self.x, self.y] in self.snakeList[:-1]:
